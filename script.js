@@ -219,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Event Listener para o envio do formulário
-    form.addEventListener('submit', (event) => {
+    form.addEventListener('submit', async (event) => { // Adicione 'async' aqui
         event.preventDefault(); // Impede o envio padrão do formulário
 
         mensagemSucesso.textContent = ''; // Limpa mensagens anteriores
@@ -235,12 +235,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         let todasDatasValidas = true;
-        // Valida cada campo de data, respeitando a obrigatoriedade e o estado (habilitado/desabilitado)
         for (let i = 0; i < dataSelectors.length; i++) {
             const selectElement = dataSelectors[i];
             const regra = regrasCampoData[i];
 
-            // Se o campo é obrigatório mas está desabilitado, ou se não foi preenchido corretamente
             if (regra.obrigatorio && (selectElement.disabled || selectElement.value === "")) {
                  mensagemSucesso.textContent = `Por favor, selecione a ${i + 1}ª data.`;
                  mensagemSucesso.style.color = 'red';
@@ -248,7 +246,6 @@ document.addEventListener('DOMContentLoaded', () => {
                  break;
             }
             
-            // Se o campo está habilitado e não vazio, ou se é facultativo e está vazio, valide-o
             if (!selectElement.disabled && !validarCampoData(selectElement, i)) {
                 todasDatasValidas = false;
                 break;
@@ -256,17 +253,48 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (!todasDatasValidas) {
-            return; // A mensagem de erro já foi exibida por validarCampoData
+            return; 
         }
 
-        // Se todas as validações passaram
-        mensagemSucesso.textContent = 'Formulário enviado com sucesso! (Não há backend para processar os dados)';
-        mensagemSucesso.style.color = 'green';
+        // Se todas as validações frontend passaram, agora enviamos para o Formspree.
+        // Você pode manter uma mensagem de sucesso temporária ou deixar o Formspree redirecionar.
         
-        // Opcional: Limpar o formulário e reabilitar apenas o primeiro campo para um novo preenchimento
-        // form.reset(); 
-        // for (let i = 0; i < dataSelectors.length; i++) {
-        //     toggleDataField(i, i === 0);
-        // }
+        // **OPÇÃO 1: Deixar o Formspree lidar com o redirecionamento/mensagem**
+        // Removeríamos a mensagemSucesso e o preventDefault final
+        // mas como já temos o preventDefault por conta das validações,
+        // faremos o envio programaticamente.
+
+        // **OPÇÃO 2: Enviar via Fetch API (mais controle no frontend)**
+        // Esta é a melhor opção se você quiser continuar exibindo a mensagem de sucesso customizada.
+        const formData = new FormData(form); // Coleta todos os dados do formulário
+        
+        try {
+            const response = await fetch(form.action, { // Envia para a URL do Formspree
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Accept': 'application/json' // Isso faz o Formspree retornar JSON em vez de redirecionar
+                }
+            });
+
+            if (response.ok) { // Verifica se a resposta foi bem-sucedida (código 2xx)
+                mensagemSucesso.textContent = 'Inscrição enviada com sucesso! Verifique seu email no Formspree.';
+                mensagemSucesso.style.color = 'green';
+                form.reset(); // Opcional: Limpa o formulário após o envio
+                // Reabilita apenas o primeiro campo de data para um novo preenchimento
+                for (let i = 0; i < dataSelectors.length; i++) {
+                    toggleDataField(i, i === 0);
+                }
+            } else {
+                const errorData = await response.json();
+                console.error('Erro no envio do formulário:', errorData);
+                mensagemSucesso.textContent = `Erro ao enviar o formulário: ${errorData.error || 'Tente novamente.'}`;
+                mensagemSucesso.style.color = 'red';
+            }
+        } catch (error) {
+            console.error('Erro de rede ou envio:', error);
+            mensagemSucesso.textContent = 'Ocorreu um erro de conexão. Tente novamente mais tarde.';
+            mensagemSucesso.style.color = 'red';
+        }
     });
 });
