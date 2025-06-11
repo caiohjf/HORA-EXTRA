@@ -218,8 +218,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Event Listener para o envio do formulário
-    form.addEventListener('submit', async (event) => { // Adicione 'async' aqui
+        // Event Listener para o envio do formulário
+    form.addEventListener('submit', async (event) => {
         event.preventDefault(); // Impede o envio padrão do formulário
 
         mensagemSucesso.textContent = ''; // Limpa mensagens anteriores
@@ -235,10 +235,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         let todasDatasValidas = true;
+        // Valida cada campo de data antes de prosseguir com o envio
         for (let i = 0; i < dataSelectors.length; i++) {
             const selectElement = dataSelectors[i];
             const regra = regrasCampoData[i];
 
+            // Se o campo é obrigatório e está desabilitado OU não foi preenchido corretamente, falha a validação
             if (regra.obrigatorio && (selectElement.disabled || selectElement.value === "")) {
                  mensagemSucesso.textContent = `Por favor, selecione a ${i + 1}ª data.`;
                  mensagemSucesso.style.color = 'red';
@@ -246,6 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
                  break;
             }
             
+            // Se o campo está habilitado (ou deveria estar) e tem uma seleção que precisa ser validada
             if (!selectElement.disabled && !validarCampoData(selectElement, i)) {
                 todasDatasValidas = false;
                 break;
@@ -256,32 +259,39 @@ document.addEventListener('DOMContentLoaded', () => {
             return; 
         }
 
-        // Se todas as validações frontend passaram, agora enviamos para o Formspree.
-        // Você pode manter uma mensagem de sucesso temporária ou deixar o Formspree redirecionar.
-        
-        // **OPÇÃO 1: Deixar o Formspree lidar com o redirecionamento/mensagem**
-        // Removeríamos a mensagemSucesso e o preventDefault final
-        // mas como já temos o preventDefault por conta das validações,
-        // faremos o envio programaticamente.
+        // --- INÍCIO DA MUDANÇA PARA ENVIAR DATAS FORMATADAS ---
+        const formData = new FormData(); // Cria um novo FormData vazio
 
-        // **OPÇÃO 2: Enviar via Fetch API (mais controle no frontend)**
-        // Esta é a melhor opção se você quiser continuar exibindo a mensagem de sucesso customizada.
-        const formData = new FormData(form); // Coleta todos os dados do formulário
+        // Adiciona Nome e Masp
+        formData.append('nome', form.elements['nome'].value.trim());
+        formData.append('masp', maspInput.value.trim());
+
+        // Para cada seletor de data, adiciona a data formatada
+        dataSelectors.forEach((selectElement, index) => {
+            if (selectElement.value !== "") { // Se uma data foi selecionada (não é a opção "Não selecionar" ou a padrão)
+                const selectedOption = selectElement.options[selectElement.selectedIndex];
+                // Usa o textContent da opção, que já está formatado
+                formData.append(`data${index + 1}`, selectedOption.textContent); 
+            } else {
+                // Se o campo for opcional e não foi selecionado, envia um valor vazio ou nulo
+                formData.append(`data${index + 1}`, ''); 
+            }
+        });
+        // --- FIM DA MUDANÇA ---
         
         try {
-            const response = await fetch(form.action, { // Envia para a URL do Formspree
+            const response = await fetch(form.action, { 
                 method: 'POST',
-                body: formData,
+                body: formData, // Envia o nosso formData personalizado
                 headers: {
-                    'Accept': 'application/json' // Isso faz o Formspree retornar JSON em vez de redirecionar
+                    'Accept': 'application/json' 
                 }
             });
 
-            if (response.ok) { // Verifica se a resposta foi bem-sucedida (código 2xx)
+            if (response.ok) { 
                 mensagemSucesso.textContent = 'Inscrição enviada com sucesso! Verifique seu email no Formspree.';
                 mensagemSucesso.style.color = 'green';
-                form.reset(); // Opcional: Limpa o formulário após o envio
-                // Reabilita apenas o primeiro campo de data para um novo preenchimento
+                form.reset(); 
                 for (let i = 0; i < dataSelectors.length; i++) {
                     toggleDataField(i, i === 0);
                 }
