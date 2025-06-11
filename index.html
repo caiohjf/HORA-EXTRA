@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulário de Inscrição</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Formulário de Inscrição</h1>
+        <form id="inscricaoForm">
+            <div class="form-group">
+                <label for="nome">Nome Completo:</label>
+                <input type="text" id="nome" name="nome" required>
+            </div>
+
+            <div class="form-group">
+                <label for="masp">Masp (somente números):</label>
+                <input type="text" id="masp" name="masp" pattern="[0-9]*" inputmode="numeric" required>
+            </div>
+
+            <div class="form-group">
+                <label for="data1">Primeira Data (fim de semana obrigatório):</label>
+                <select id="data1" name="data1" required></select>
+            </div>
+
+            <div class="form-group">
+                <label for="data2">Segunda Data (facultativa):</label>
+                <select id="data2" name="data2" required></select>
+            </div>
+
+            <div class="form-group">
+                <label for="data3">Terceira Data (fim de semana obrigatório):</label>
+                <select id="data3" name="data3" required></select>
+            </div>
+
+            <div class="form-group">
+                <label for="data4">Quarta Data (facultativa):</label>
+                <select id="data4" name="data4" required></select>
+            </div>
+            
+            <button type="submit">Enviar Inscrição</button>
+            <p id="mensagemSucesso" class="mensagem-sucesso"></p>
+        </form>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
