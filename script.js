@@ -62,8 +62,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Popula um elemento <select> com as datas válidas.
-     * O value do option volta a ser o timestamp, e o textContent é a data formatada.
-     * A formatação para envio será feita no submit do formulário.
+     * O value do option será o timestamp, e o textContent é a data formatada.
+     * O envio da data formatada será feito manualmente no submit do formulário.
      * @param {HTMLElement} selectElement - O elemento <select> a ser populado.
      * @param {number} fieldIndex - O índice do campo de data (0 a 3).
      */
@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         datas.forEach(data => {
             const option = document.createElement('option');
-            // Revertendo para o timestamp no value do option
+            // Mantém o timestamp no value para a lógica interna de validação e dataset.isWeekend
             option.value = data.date.getTime(); 
             option.textContent = data.formatted; // O texto visível continua sendo formatado
             option.dataset.isWeekend = data.isWeekend; 
@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- MUDANÇA PRINCIPAL AQUI: NO EVENTO DE SUBMIT ---
+    // --- MUDANÇA MAIS ROBUSTA AQUI: ENVIANDO DADOS COMO JSON ---
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
 
@@ -226,31 +226,32 @@ document.addEventListener('DOMContentLoaded', () => {
             return; 
         }
 
-        // Remover campos ocultos anteriores para evitar duplicatas
-        const oldHiddenInputs = form.querySelectorAll('input[type="hidden"][data-custom-date="true"]');
-        oldHiddenInputs.forEach(input => input.remove());
+        // --- CRIE UM OBJETO DE DADOS COM AS DATAS JÁ FORMATADAS ---
+        const dadosParaEnvio = {
+            nome: form.elements['nome'].value.trim(),
+            masp: maspInput.value.trim()
+        };
 
-        // Criar um novo FormData
-        const formData = new FormData(form); 
-
-        // Para cada seletor de data, adicionamos um campo oculto com o texto formatado
         dataSelectors.forEach((selectElement, index) => {
-            if (!selectElement.disabled && selectElement.value !== "") { // Se o campo está habilitado e uma data foi selecionada
+            // Apenas adiciona se uma data foi selecionada e o campo não está desabilitado
+            if (!selectElement.disabled && selectElement.value !== "") {
                 const selectedOption = selectElement.options[selectElement.selectedIndex];
-                const hiddenInput = document.createElement('input');
-                hiddenInput.type = 'hidden';
-                hiddenInput.name = `data${index + 1}_formatada`; // Nome diferente para evitar conflito com o select
-                hiddenInput.value = selectedOption.textContent; // O texto formatado
-                hiddenInput.dataset.customDate = 'true'; // Marcador para fácil remoção
-                form.appendChild(hiddenInput); // Adiciona ao formulário
+                // Usa o textContent da opção, que é a data formatada
+                dadosParaEnvio[`data${index + 1}`] = selectedOption.textContent; 
+            } else if (!regrasCampoData[index].obrigatorio) {
+                // Se o campo é opcional e não foi selecionado, envia vazio ou um valor indicativo
+                dadosParaEnvio[`data${index + 1}`] = ''; 
             }
         });
-
+        // --- FIM DA CRIAÇÃO DO OBJETO DE DADOS ---
+        
         try {
             const response = await fetch(form.action, { 
                 method: 'POST',
-                body: formData, // Continua usando formData que agora inclui os campos ocultos
+                // IMPORTANTE: Use JSON.stringify para enviar como JSON
+                body: JSON.stringify(dadosParaEnvio), 
                 headers: {
+                    'Content-Type': 'application/json', // Informe que está enviando JSON
                     'Accept': 'application/json' 
                 }
             });
@@ -272,10 +273,6 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Erro de rede ou envio:', error);
             mensagemSucesso.textContent = 'Ocorreu um erro de conexão. Tente novamente mais tarde.';
             mensagemSucesso.style.color = 'red';
-        } finally {
-             // Remover os campos ocultos após o envio (sucesso ou falha)
-            const oldHiddenInputs = form.querySelectorAll('input[type="hidden"][data-custom-date="true"]');
-            oldHiddenInputs.forEach(input => input.remove());
         }
     });
 });
