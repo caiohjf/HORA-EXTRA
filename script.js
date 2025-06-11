@@ -11,21 +11,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const diasDaSemana = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
     
-    // Novas regras, mais específicas para cada campo
+    // Regras atualizadas: 'fimDeSemanaPuro' para apenas sábados/domingos
     const regrasCampoData = [
-        { index: 0, tipo: 'fimDeSemana', obrigatorio: true, msgErro: 'Primeira data deve ser um sábado ou domingo.' },
-        { index: 1, tipo: 'facultativa', obrigatorio: false, msgErro: '' }, // Facultativa pode ser qualquer dia válido
-        { index: 2, tipo: 'fimDeSemana', obrigatorio: false, msgErro: 'Terceira data deve ser um sábado ou domingo.' },
+        { index: 0, tipo: 'fimDeSemanaPuro', obrigatorio: true, msgErro: 'Primeira data deve ser um sábado ou domingo.' },
+        { index: 1, tipo: 'facultativa', obrigatorio: false, msgErro: '' }, 
+        { index: 2, tipo: 'fimDeSemanaPuro', obrigatorio: false, msgErro: 'Terceira data deve ser um sábado ou domingo.' },
         { index: 3, tipo: 'facultativa', obrigatorio: false, msgErro: '' }
     ];
 
     /**
-     * Gera e retorna um array com as datas válidas (terças, quintas, sábados, domingos)
-     * do mês e ano atual, com opção de filtrar por tipo de dia.
-     * @param {string} filterType - 'todos' | 'fimDeSemana'.
+     * Gera e retorna um array com as datas válidas do mês e ano atual,
+     * com opção de filtrar por tipo de dia (terça, quinta, sábado, domingo).
+     * @param {string} filterType - 'todosDiasValidos' (terças, quintas, sábados, domingos) | 'fimDeSemanaPuro' (somente sábados, domingos).
      * @returns {Array<Object>} Um array de objetos, onde cada objeto tem { date: Date, formatted: string, isWeekend: boolean }.
      */
-    function gerarDatasValidasDoMes(filterType = 'todos') {
+    function gerarDatasValidasDoMes(filterType = 'todosDiasValidos') {
         const hoje = new Date();
         const anoAtual = hoje.getFullYear();
         const mesAtual = hoje.getMonth();
@@ -40,13 +40,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const isWeekend = (diaDaSemana === 0 || diaDaSemana === 6);
             const isWeekdaySpecial = (diaDaSemana === 2 || diaDaSemana === 4); // Terça ou Quinta
 
-            // Adiciona a data se ela atender aos critérios gerais (terça, quinta, sábado, domingo)
-            // E se atender ao filtro específico ('fimDeSemana' ou 'todos')
-            if ((isWeekend || isWeekdaySpecial)) {
-                if (filterType === 'fimDeSemana' && !isWeekend) {
-                    continue; // Pula se o filtro é fim de semana e não é fim de semana
+            let shouldAddDate = false;
+
+            if (filterType === 'fimDeSemanaPuro') {
+                // Se o filtro é para puro fim de semana, só adiciona se for sábado ou domingo
+                if (isWeekend) {
+                    shouldAddDate = true;
                 }
-                
+            } else { // filterType é 'todosDiasValidos' ou não especificado
+                // Adiciona se for terça, quinta, sábado ou domingo
+                if (isWeekend || isWeekdaySpecial) {
+                    shouldAddDate = true;
+                }
+            }
+
+            if (shouldAddDate) {
                 const diaFormatado = String(dia).padStart(2, '0');
                 const mesFormatado = String(mesAtual + 1).padStart(2, '0');
                 const nomeDia = diasDaSemana[diaDaSemana];
@@ -68,20 +76,32 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function popularSelectDeData(selectElement, fieldIndex) {
         const regra = regrasCampoData[fieldIndex];
-        const datas = gerarDatasValidasDoMes(regra.tipo === 'fimDeSemana' ? 'fimDeSemana' : 'todos');
-        
-        selectElement.innerHTML = `<option value="" ${regra.obrigatorio ? 'disabled' : ''} selected>Selecione uma data</option>`;
-        
-        // Se o campo for obrigatório, a primeira opção é disabled e selected
-        if (regra.obrigatorio) {
-            selectElement.innerHTML = '<option value="" disabled selected>Selecione uma data</option>';
-        } else {
-            // Se não for obrigatório, pode ter uma opção vazia que não é selecionada por padrão
-            selectElement.innerHTML = '<option value="">Não selecionar</option>';
-            // E a opção "Selecione uma data" também, mas não selecionada por padrão
-            selectElement.innerHTML += '<option value="" disabled selected>Selecione uma data</option>';
-        }
+        let datas;
 
+        // Chama gerarDatasValidasDoMes com o filtro correto baseado na regra
+        if (regra.tipo === 'fimDeSemanaPuro') {
+            datas = gerarDatasValidasDoMes('fimDeSemanaPuro');
+        } else { // 'facultativa'
+            datas = gerarDatasValidasDoMes('todosDiasValidos');
+        }
+        
+        selectElement.innerHTML = ''; // Limpa as opções existentes
+
+        // Adiciona a opção padrão "Selecione uma data"
+        const defaultOption = document.createElement('option');
+        defaultOption.value = "";
+        defaultOption.textContent = "Selecione uma data";
+        defaultOption.disabled = true;
+        defaultOption.selected = true;
+        selectElement.appendChild(defaultOption);
+
+        // Se não for obrigatório, permite uma opção para "Não selecionar"
+        if (!regra.obrigatorio) {
+            const emptyOption = document.createElement('option');
+            emptyOption.value = "";
+            emptyOption.textContent = "Não selecionar";
+            selectElement.appendChild(emptyOption);
+        }
 
         datas.forEach(data => {
             const option = document.createElement('option');
@@ -100,12 +120,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function toggleDataField(fieldIndex, enable) {
         const selectElement = dataSelectors[fieldIndex];
         selectElement.disabled = !enable;
-        if (enable && selectElement.options.length <= 1) { // Só popula se estiver vazio ou com a opção padrão
+        if (enable) {
+            // Sempre repopula para garantir que o filtro esteja correto
             popularSelectDeData(selectElement, fieldIndex);
-        }
-        // Se desabilitar, reseta a seleção
-        if (!enable) {
-            selectElement.value = "";
+        } else {
+            // Se desabilitar, reseta a seleção e limpa as opções (exceto a padrão)
+            selectElement.innerHTML = `<option value="" disabled selected>Selecione uma data</option>`;
+            if (!regrasCampoData[fieldIndex].obrigatorio) {
+                 selectElement.innerHTML += '<option value="">Não selecionar</option>';
+            }
         }
     }
 
@@ -119,22 +142,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectedOption = selectElement.options[selectElement.selectedIndex];
         const regra = regrasCampoData[fieldIndex];
 
-        // Se o campo for obrigatório e nada foi selecionado
-        if (regra.obrigatorio && (!selectedOption || selectedOption.value === "")) {
+        // Se o campo for obrigatório e nada válido foi selecionado
+        if (regra.obrigatorio && (!selectedOption || selectedOption.value === "" || selectedOption.disabled)) {
             mensagemSucesso.textContent = `Por favor, selecione a ${fieldIndex + 1}ª data.`;
             mensagemSucesso.style.color = 'red';
             return false;
         }
 
-        // Se o campo não for obrigatório e não foi selecionado, está ok
-        if (!regra.obrigatorio && (!selectedOption || selectedOption.value === "")) {
+        // Se o campo não for obrigatório e não foi selecionado (opção vazia), está ok
+        if (!regra.obrigatorio && selectedOption && selectedOption.value === "") {
+            mensagemSucesso.textContent = ''; // Limpa a mensagem se estava exibindo algo
             return true;
         }
 
         const isWeekendSelected = selectedOption.dataset.isWeekend === 'true';
 
-        // Valida a regra específica (fim de semana)
-        if (regra.tipo === 'fimDeSemana' && !isWeekendSelected) {
+        // Valida a regra específica de tipo de dia (fimDeSemanaPuro)
+        if (regra.tipo === 'fimDeSemanaPuro' && !isWeekendSelected) {
             mensagemSucesso.textContent = `${regra.msgErro}`;
             mensagemSucesso.style.color = 'red';
             return false;
@@ -147,9 +171,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Inicialização e Event Listeners ---
 
     // Inicializa o primeiro seletor de data e desabilita os outros
-    toggleDataField(0, true); // Habilita e popula o campo 1
+    toggleDataField(0, true); // Habilita e popula o campo 1 com sábados/domingos
     for (let i = 1; i < dataSelectors.length; i++) {
-        toggleDataField(i, false); // Desabilita os campos 2, 3 e 4
+        toggleDataField(i, false); // Desabilita e limpa os campos 2, 3 e 4
     }
 
     // Event Listener para validação do MASP
@@ -161,29 +185,26 @@ document.addEventListener('DOMContentLoaded', () => {
     dataSelectors.forEach((selectElement, index) => {
         selectElement.addEventListener('change', () => {
             mensagemSucesso.textContent = ''; // Limpa mensagens anteriores
+
             if (!validarCampoData(selectElement, index)) {
-                // Se a validação do campo atual falhou, não habilita o próximo
-                if (index < dataSelectors.length -1) {
-                    toggleDataField(index + 1, false); // Desabilita o próximo
-                    // Desabilita e reseta todos os campos subsequentes
-                    for (let i = index + 2; i < dataSelectors.length; i++) {
-                        toggleDataField(i, false);
-                    }
+                // Se a validação do campo atual falhou, desabilita e reseta os próximos
+                for (let i = index + 1; i < dataSelectors.length; i++) {
+                    toggleDataField(i, false);
                 }
                 return;
             }
 
-            // Se o campo atual foi preenchido e validado, habilita o próximo
+            // Se o campo atual foi preenchido e validado, habilita o próximo (se existir)
             if (index < dataSelectors.length - 1) {
                 toggleDataField(index + 1, true);
             }
             
-            // Se um campo anterior foi alterado, e os campos subsequentes já estavam preenchidos,
-            // revalida eles para garantir que a sequência continua correta.
+            // Revalida campos subsequentes que já foram preenchidos
             for (let i = index + 1; i < dataSelectors.length; i++) {
-                if (dataSelectors[i].value !== "") { // Se o campo subsequente tem um valor
+                // Só revalida se o campo está habilitado e tem um valor selecionado
+                if (!dataSelectors[i].disabled && dataSelectors[i].value !== "") { 
                     if (!validarCampoData(dataSelectors[i], i)) {
-                        // Se a validação falhar, desabilita e reseta os campos a partir daqui
+                        // Se a revalidação falhar, desabilita e reseta os campos a partir daqui
                         for (let j = i + 1; j < dataSelectors.length; j++) {
                             toggleDataField(j, false);
                         }
@@ -203,7 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         mensagemSucesso.textContent = ''; // Limpa mensagens anteriores
 
-        // Validação básica de campos obrigatórios
+        // Validação básica de campos obrigatórios (Nome e Masp)
         const nomeValido = form.elements['nome'].value.trim() !== '';
         const maspValido = maspInput.value.trim().length > 0;
 
@@ -214,22 +235,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         let todasDatasValidas = true;
-        // Valida cada campo de data, respeitando a obrigatoriedade
+        // Valida cada campo de data, respeitando a obrigatoriedade e o estado (habilitado/desabilitado)
         for (let i = 0; i < dataSelectors.length; i++) {
             const selectElement = dataSelectors[i];
             const regra = regrasCampoData[i];
 
-            // Se o campo está desabilitado, significa que o anterior não foi preenchido corretamente,
-            // ou que este campo e os seguintes são opcionais e não foram selecionados.
-            // A validação `validarCampoData` já lida com a obrigatoriedade.
-            if (selectElement.disabled && regra.obrigatorio) {
-                mensagemSucesso.textContent = `Por favor, preencha a ${i + 1}ª data.`;
-                mensagemSucesso.style.color = 'red';
-                todasDatasValidas = false;
-                break;
+            // Se o campo é obrigatório mas está desabilitado, ou se não foi preenchido corretamente
+            if (regra.obrigatorio && (selectElement.disabled || selectElement.value === "")) {
+                 mensagemSucesso.textContent = `Por favor, selecione a ${i + 1}ª data.`;
+                 mensagemSucesso.style.color = 'red';
+                 todasDatasValidas = false;
+                 break;
             }
             
-            // Se o campo está habilitado, mesmo que opcional, valide sua seleção
+            // Se o campo está habilitado e não vazio, ou se é facultativo e está vazio, valide-o
             if (!selectElement.disabled && !validarCampoData(selectElement, i)) {
                 todasDatasValidas = false;
                 break;
@@ -244,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
         mensagemSucesso.textContent = 'Formulário enviado com sucesso! (Não há backend para processar os dados)';
         mensagemSucesso.style.color = 'green';
         
-        // Opcional: Limpar o formulário e reabilitar apenas o primeiro campo
+        // Opcional: Limpar o formulário e reabilitar apenas o primeiro campo para um novo preenchimento
         // form.reset(); 
         // for (let i = 0; i < dataSelectors.length; i++) {
         //     toggleDataField(i, i === 0);
