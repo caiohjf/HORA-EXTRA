@@ -1,0 +1,123 @@
+/* Estilos Gerais (Mobile-First) */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f4f7f6;
+    color: #333;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 100%; /* Para mobile, ocupa a largura total com padding */
+    margin: 0 auto;
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    color: #0056b3;
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 1.8em; /* Ajuste para telas menores */
+}
+
+/* Estilos dos Grupos de Formulário */
+.form-group {
+    margin-bottom: 18px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #555;
+    font-size: 0.95em;
+}
+
+input[type="text"],
+select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    box-sizing: border-box; /* Garante que o padding não aumente a largura */
+    font-size: 1em;
+    color: #333;
+    -webkit-appearance: none; /* Remove estilo padrão em navegadores Webkit */
+    -moz-appearance: none;    /* Remove estilo padrão em navegadores Mozilla */
+    appearance: none;         /* Remove estilo padrão geral */
+    background-color: #fdfdfd;
+}
+
+input[type="text"]:focus,
+select:focus {
+    border-color: #007bff;
+    outline: none; /* Remove o contorno padrão do navegador */
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+/* Estilos do Botão */
+button[type="submit"] {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 1.1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-top: 25px;
+}
+
+button[type="submit"]:hover {
+    background-color: #0056b3;
+}
+
+/* Mensagem de Sucesso/Erro */
+.mensagem-sucesso {
+    color: green;
+    text-align: center;
+    margin-top: 20px;
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+/* Media Queries para Telas Maiores (Tablets e Desktops) */
+@media (min-width: 600px) {
+    .container {
+        max-width: 500px; /* Limita a largura em telas maiores */
+        padding: 35px;
+    }
+
+    h1 {
+        font-size: 2.2em;
+    }
+
+    label {
+        font-size: 1em;
+    }
+
+    input[type="text"],
+    select {
+        padding: 14px;
+        font-size: 1.1em;
+    }
+
+    button[type="submit"] {
+        padding: 16px;
+        font-size: 1.2em;
+    }
+}
+
+/* Media Queries para Telas Muito Grandes (Opcional, se quiser um limite maior) */
+@media (min-width: 900px) {
+    .container {
+        max-width: 600px;
+    }
+}
